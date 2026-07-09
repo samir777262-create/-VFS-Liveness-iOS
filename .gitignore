@@ -1,0 +1,26 @@
+# Xcode
+*.xcworkspace
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+*.xcuserstate
+*.xcscmblueprint
+*.ipa
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/
+Package.resolved
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Hermes
+tmp/
+.hermes/

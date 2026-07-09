@@ -1,0 +1,172 @@
+name: iOS Build & IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    env:
+      XCODE_PROJECT: VFS_Liveness_Demo.xcodeproj
+      XCODE_SCHEME: VFS_Liveness_Demo
+      XCODE_BUILD_DIR: build
+      # قم بتعيين القيم الافتراضية أو املأها من secrets
+      DEVELOPER_DIR: /Applications/Xcode_15.3.app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s "$DEVELOPER_DIR"
+
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: Pods
+          key: pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: |
+            pods-
+
+      - name: Install dependencies
+        run: |
+          if [ -f Package.swift ]; then
+            swift package resolve
+          fi
+          if [ -f Podfile ]; then
+            pod install --repo-update
+          fi
+
+      - name: List Project Files
+        run: |
+          echo "=== Project Structure ==="
+          find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
+          ls -la "$XCODE_PROJECT" || echo "Project file not found"
+
+      - name: Import Certificates
+        if: github.event_name != 'pull_request'
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -n "$CERTIFICATE_P12" ]; then
+            echo "Importing signing certificate..."
+            echo "$CERTIFICATE_P12" | base64 -d > cert.p12
+            security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+            echo "Certificate imported successfully"
+          else
+            echo "No certificate found in secrets, skipping import"
+          fi
+
+      - name: Build Archive
+        run: |
+          echo "Creating archive..."
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.DEVELOPMENT_TEAM }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_SPECIFIER }}" \
+            CODE_SIGN_IDENTITY="${{ secrets.CODE_SIGN_IDENTITY }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.BUNDLE_IDENTIFIER }}" \
+            clean archive | xcpretty --color
+
+      - name: Export IPA
+        env:
+          EXPORT_METHOD: ${{ github.event_name == 'pull_request' && 'ad-hoc' || 'app-store' }}
+        run: |
+          echo "Exporting IPA with method: $EXPORT_METHOD"
+          mkdir -p "$XCODE_BUILD_DIR/exports"
+          
+          cat > "$XCODE_BUILD_DIR/ExportOptions.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.yourcompany.vfsliveness</key>
+                  <string>VFS Liveness Profile</string>
+              </dict>
+              <key>teamID</key>
+              <string>YOUR_TEAM_ID</string>
+              <key>compileBitcode</key>
+              <false/>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>destination</key>
+              <string>export</string>
+          </dict>
+          </plist>
+          EOF
+          
+          xcodebuild -exportArchive \
+            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            -exportOptionsPlist "$XCODE_BUILD_DIR/ExportOptions.plist" \
+            -exportPath "$XCODE_BUILD_DIR/exports" \
+            | xcpretty --color
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: VFS_Liveness_Demo_${{ github.sha }}
+          path: ${{ env.XCODE_BUILD_DIR }}/exports/*.ipa
+          retention-days: 14
+          compression-level: 6
+
+      - name: Upload dSYMs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dSYMs_${{ github.sha }}
+          path: ${{ env.XCODE_BUILD_DIR }}/**/*.dSYM
+          retention-days: 7
+
+      - name: Show Build Output
+        if: always()
+        run: |
+          echo "=== Build Directory ==="
+          find "$XCODE_BUILD_DIR" -type f -name "*.ipa" -o -name "*.xcarchive" -o -name "*.app"
+          ls -lh "$XCODE_BUILD_DIR/exports/" || true
+
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "## Build Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### IPA Files" >> $GITHUB_STEP_SUMMARY
+          echo "- **IPA:** VFS_Liveness_Demo_${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download" >> $GITHUB_STEP_SUMMARY
+          echo "Go to **Actions** → select latest run → **Artifacts** section" >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Failed Notification
+        if: failure()
+        run: |
+          echo "## Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs for details" >> $GITHUB_STEP_SUMMARY

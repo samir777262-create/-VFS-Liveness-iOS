@@ -1,0 +1,131 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  XCODE_PROJECT: VFS_Liveness_Demo.xcodeproj
+  XCODE_SCHEME: VFS_Liveness_Demo
+  XCODE_BUILD_DIR: build
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.3.app
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: Pods
+          key: pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: pods-
+
+      - name: Install dependencies
+        run: |
+          if [ -f Package.swift ]; then
+            swift package resolve
+          fi
+          if [ -f Podfile ]; then
+            pod install --repo-update
+          fi
+
+      - name: Import Certificates
+        if: github.event_name != 'pull_request'
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          if [ -n "$CERTIFICATE_P12" ]; then
+            echo "Importing signing certificate..."
+            echo "$CERTIFICATE_P12" | base64 -d > cert.p12
+            security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+            security import cert.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          fi
+
+      - name: Build Archive
+        run: |
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.DEVELOPMENT_TEAM }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.PROVISIONING_PROFILE_SPECIFIER }}" \
+            CODE_SIGN_IDENTITY="${{ secrets.CODE_SIGN_IDENTITY }}" \
+            clean archive | xcpretty
+
+      - name: Export IPA
+        env:
+          EXPORT_METHOD: ${{ github.event_name == 'pull_request' && 'ad-hoc' || 'app-store' }}
+        run: |
+          mkdir -p "$XCODE_BUILD_DIR/exports"
+          
+          cat > "$XCODE_BUILD_DIR/ExportOptions.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>$EXPORT_METHOD</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>${{ secrets.BUNDLE_IDENTIFIER }}</key>
+                  <string>${{ secrets.PROVISIONING_PROFILE_SPECIFIER }}</string>
+              </dict>
+              <key>teamID</key>
+              <string>${{ secrets.DEVELOPMENT_TEAM }}</string>
+              <key>compileBitcode</key>
+              <false/>
+              <key>stripSwiftSymbols</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+          
+          xcodebuild -exportArchive \
+            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            -exportOptionsPlist "$XCODE_BUILD_DIR/ExportOptions.plist" \
+            -exportPath "$XCODE_BUILD_DIR/exports" \
+            | xcpretty
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: VFS_Liveness_Demo_${{ github.sha }}
+          path: ${{ env.XCODE_BUILD_DIR }}/exports/*.ipa
+          retention-days: 14
+
+      - name: Upload dSYMs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dSYMs_${{ github.sha }}
+          path: ${{ env.XCODE_BUILD_DIR }}/**/*.dSYM
+          retention-days: 7
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ Build Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**IPA:** VFS_Liveness_Demo_${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
