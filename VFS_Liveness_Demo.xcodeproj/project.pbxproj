@@ -61,7 +61,7 @@
 				A000000E /* AzureConfig.swift */,
 				A0000010 /* AzureFaceAPIService.swift */,
 			);
-			path = VFS_Liveness_Demo;
+			path = "";
 			sourceTree = "<group>";
 		};
 		A0000019 /* Products */ = {
