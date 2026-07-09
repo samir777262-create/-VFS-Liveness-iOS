@@ -55,22 +55,27 @@ jobs:
             clean build | xcpretty
 
       - name: Create unsigned IPA
+        shell: bash
         run: |
-          APP_PATH=$(find "$XCODE_BUILD_DIR/DerivedData" -name "*.app" -type d -maxdepth 6 | head -1)
-          echo "Found app: $APP_PATH"
+          echo "=== Build Directory Tree ==="
+          find "$XCODE_BUILD_DIR" -type d -maxdepth 8 2>/dev/null | head -100
+          
+          echo "=== Looking for .app ==="
+          APP_PATH=$(find "$XCODE_BUILD_DIR" -name "*.app" -type d 2>/dev/null | head -3)
+          echo "Found: $APP_PATH"
           
           if [ -z "$APP_PATH" ]; then
             echo "ERROR: No .app found!"
-            find "$XCODE_BUILD_DIR" -type d -name "*.app" 2>/dev/null || echo "No .app anywhere"
             exit 1
           fi
           
+          echo "=== Creating IPA ==="
           mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
-          cp -R "$APP_PATH" "$XCODE_BUILD_DIR/exports/Payload/"
+          cp -R $(echo "$APP_PATH" | head -1) "$XCODE_BUILD_DIR/exports/Payload/"
           
           cd "$XCODE_BUILD_DIR/exports"
-          zip -r "$XCODE_SCHEME.ipa" Payload/
-          ls -lh "$XCODE_SCHEME.ipa"
+          zip -r "${XCODE_SCHEME}.ipa" Payload/
+          ls -lh "${XCODE_SCHEME}.ipa"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
