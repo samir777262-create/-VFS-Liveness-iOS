@@ -54,51 +54,43 @@ jobs:
           find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
           ls -la "$XCODE_PROJECT" || echo "Project file not found"
 
-      - name: Build Archive
+      - name: Build .app
         run: |
-          echo "Creating archive..."
-          xcodebuild archive \
+          echo "Building app..."
+          mkdir -p "build/app_output"
+          xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            -sdk iphoneos \
+            CONFIGURATION_BUILD_DIR="$PWD/build/app_output" \
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean archive | xcpretty --color
+            clean build | xcpretty --color
           
-          echo "=== Archive Contents ==="
-          ls -laR "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" 2>/dev/null || true
+          echo "=== Build output ==="
+          ls -la build/app_output/
 
       - name: Create unsigned IPA
         run: |
           set -euo pipefail
           echo "Creating unsigned IPA..."
-          ls -la "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" || true
-
-          APP_PATH="$(find "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" -type d -name "*.app" | head -n 1 || true)"
-
+          
+          APP_PATH="$(find "build/app_output" -type d -name "*.app" | head -n 1)"
+          echo "Found app: ${APP_PATH}"
+          
           if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
-            APP_PATH="$(find "$HOME/Library/Developer/Xcode/DerivedData" -type d -name "*VFS_Liveness_Demo*.app" | head -n 1 || true)"
-          fi
-
-          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
-            APP_PATH="$(find "$HOME/Library/Developer/Xcode/Archives" -type d -name "*.xcarchive" | head -n 1 | xargs -I{} find "{}/Products/Applications" -maxdepth 1 -type d -name "*.app" | head -n 1 || true)"
-          fi
-
-          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
-            echo "Error: .app not found"
-            find "$XCODE_BUILD_DIR" -maxdepth 4 \( -name "*.app" -o -name "*.xcarchive" \) | sed 's|^|DIAG: |' | (head -n 50 || true)
+            echo "Error: .app not found in build/app_output"
+            find "build" -type d -name "*.app" -maxdepth 6
             exit 1
           fi
-
-          echo "Using APP_PATH=${APP_PATH}"
-          mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
-          cp -R "${APP_PATH}" "$XCODE_BUILD_DIR/exports/Payload/"
-          ls -la "$XCODE_BUILD_DIR/exports/Payload/"
-
-          cd "$XCODE_BUILD_DIR/exports"
+          
+          mkdir -p "build/exports/Payload"
+          cp -R "${APP_PATH}" "build/exports/Payload/"
+          
+          cd "build/exports"
           zip -r "${XCODE_SCHEME}.ipa" Payload/
           ls -lh "${XCODE_SCHEME}.ipa"
 
@@ -106,9 +98,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: VFS_Liveness_Demo_${{ github.sha }}
-          path: ${{ env.XCODE_BUILD_DIR }}/exports/*.ipa
+          path: build/exports/*.ipa
           retention-days: 14
-          compression-level: 6
 
       - name: Upload dSYMs
         if: always()
