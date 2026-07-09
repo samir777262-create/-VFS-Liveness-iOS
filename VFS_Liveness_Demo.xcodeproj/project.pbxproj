@@ -14,8 +14,7 @@
 		A000000B /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000C /* HapticFeedback.swift */; };
 		A000000D /* AzureConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000E /* AzureConfig.swift */; };
 		A000000F /* AzureFaceAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000010 /* AzureFaceAPIService.swift */; };
-		A0000011 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A0000012 /* Info.plist */; };
-		A0000013 /* AppIcon.appiconset in Resources */ = {isa = PBXBuildFile; fileRef = A0000014 /* AppIcon.appiconset */; };
+				A0000013 /* AppIcon.appiconset in Resources */ = {isa = PBXBuildFile; fileRef = A0000014 /* AppIcon.appiconset */; };
 		/* End PBXBuildFile section */
 
 		/* Begin PBXFileReference section */
@@ -142,7 +141,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A0000011 /* Info.plist in Resources */,
 				A0000013 /* AppIcon.appiconset in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
