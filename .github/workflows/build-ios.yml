@@ -55,13 +55,22 @@ jobs:
 
       - name: Create unsigned IPA
         run: |
-          APP_NAME="$XCODE_SCHEME"
           ARCHIVE_PATH="$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive"
           mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
-          cp -R "$ARCHIVE_PATH/Products/Applications/$APP_NAME.app" "$XCODE_BUILD_DIR/exports/Payload/"
+          
+          APP_BUNDLE=$(find "$ARCHIVE_PATH" -name "*.app" -type d -maxdepth 4 | head -1)
+          echo "Found app bundle: $APP_BUNDLE"
+          
+          if [ -z "$APP_BUNDLE" ]; then
+            echo "ERROR: No .app found in archive!"
+            find "$ARCHIVE_PATH" -type d -maxdepth 4
+            exit 1
+          fi
+          
+          cp -R "$APP_BUNDLE" "$XCODE_BUILD_DIR/exports/Payload/"
           cd "$XCODE_BUILD_DIR/exports"
-          zip -r "$APP_NAME.ipa" Payload/
-          ls -lh "$APP_NAME.ipa"
+          zip -r "$XCODE_SCHEME.ipa" Payload/
+          ls -lh "$XCODE_SCHEME.ipa"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
