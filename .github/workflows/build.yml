@@ -54,36 +54,36 @@ jobs:
           find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
           ls -la "$XCODE_PROJECT" || echo "Project file not found"
 
-      - name: Build Archive
+      - name: Build .app
         run: |
-          echo "Creating archive..."
-          xcodebuild archive \
+          echo "Building .app..."
+          xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
+            -sdk iphoneos \
+            -derivedDataPath "$XCODE_BUILD_DIR/DerivedData" \
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean archive | xcpretty --color
+            clean build | xcpretty --color
 
       - name: Create unsigned IPA
         run: |
           echo "Creating unsigned IPA..."
-          ARCHIVE_PATH="$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive"
-          mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
+          APP_PATH=$(find "$XCODE_BUILD_DIR/DerivedData" -name "*.app" -type d -maxdepth 6 | head -1)
+          echo "Found app: $APP_PATH"
           
-          APP_BUNDLE=$(find "$ARCHIVE_PATH" -name "*.app" -type d -maxdepth 4 | head -1)
-          echo "Found app bundle: $APP_BUNDLE"
-          
-          if [ -z "$APP_BUNDLE" ]; then
-            echo "ERROR: No .app found in archive!"
-            find "$ARCHIVE_PATH" -type d -maxdepth 4
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: No .app found!"
+            find "$XCODE_BUILD_DIR" -type d -name "*.app" 2>/dev/null || echo "No .app anywhere"
             exit 1
           fi
           
-          cp -R "$APP_BUNDLE" "$XCODE_BUILD_DIR/exports/Payload/"
+          mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
+          cp -R "$APP_PATH" "$XCODE_BUILD_DIR/exports/Payload/"
+          
           cd "$XCODE_BUILD_DIR/exports"
           zip -r "$XCODE_SCHEME.ipa" Payload/
           ls -lh "$XCODE_SCHEME.ipa"
