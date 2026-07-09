@@ -54,40 +54,50 @@ jobs:
           find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
           ls -la "$XCODE_PROJECT" || echo "Project file not found"
 
-      - name: Build .app
+      - name: Build Archive
         run: |
-          echo "Building .app..."
-          xcodebuild build \
+          echo "Creating archive..."
+          xcodebuild archive \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath "$XCODE_BUILD_DIR/DerivedData" \
+            -archivePath "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive" \
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color
+            clean archive | xcpretty --color
+          
+          echo "=== Archive Contents ==="
+          ls -laR "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" 2>/dev/null || true
 
       - name: Create unsigned IPA
-        shell: bash
         run: |
-          echo "=== Build Directory Tree ==="
-          find "$XCODE_BUILD_DIR" -type d -maxdepth 8 2>/dev/null | head -100
-          
-          echo "=== Looking for .app ==="
-          APP_PATH=$(find "$XCODE_BUILD_DIR" -name "*.app" -type d 2>/dev/null | head -3)
-          echo "Found: $APP_PATH"
-          
-          if [ -z "$APP_PATH" ]; then
-            echo "ERROR: No .app found!"
+          set -euo pipefail
+          echo "Creating unsigned IPA..."
+          ls -la "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" || true
+
+          APP_PATH="$(find "$XCODE_BUILD_DIR/$XCODE_SCHEME.xcarchive/Products/" -type d -name "*.app" | head -n 1 || true)"
+
+          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
+            APP_PATH="$(find "$HOME/Library/Developer/Xcode/DerivedData" -type d -name "*VFS_Liveness_Demo*.app" | head -n 1 || true)"
+          fi
+
+          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
+            APP_PATH="$(find "$HOME/Library/Developer/Xcode/Archives" -type d -name "*.xcarchive" | head -n 1 | xargs -I{} find "{}/Products/Applications" -maxdepth 1 -type d -name "*.app" | head -n 1 || true)"
+          fi
+
+          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
+            echo "Error: .app not found"
+            find "$XCODE_BUILD_DIR" -maxdepth 4 \( -name "*.app" -o -name "*.xcarchive" \) | sed 's|^|DIAG: |' | (head -n 50 || true)
             exit 1
           fi
-          
-          echo "=== Creating IPA ==="
+
+          echo "Using APP_PATH=${APP_PATH}"
           mkdir -p "$XCODE_BUILD_DIR/exports/Payload"
-          cp -R $(echo "$APP_PATH" | head -1) "$XCODE_BUILD_DIR/exports/Payload/"
-          
+          cp -R "${APP_PATH}" "$XCODE_BUILD_DIR/exports/Payload/"
+          ls -la "$XCODE_BUILD_DIR/exports/Payload/"
+
           cd "$XCODE_BUILD_DIR/exports"
           zip -r "${XCODE_SCHEME}.ipa" Payload/
           ls -lh "${XCODE_SCHEME}.ipa"
