@@ -54,45 +54,61 @@ jobs:
           find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
           ls -la "$XCODE_PROJECT" || echo "Project file not found"
 
-      - name: Build .app
+      - name: Build and Package
         run: |
-          echo "Building app..."
-          mkdir -p "build/app_output"
+          set -euo pipefail
+          
+          echo "=== 1. Build .app ==="
           xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -sdk iphoneos \
-            CONFIGURATION_BUILD_DIR="$PWD/build/app_output" \
+            -derivedDataPath "$PWD/build/dd" \
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color
+            clean build 2>&1 | xcpretty --color || true
           
-          echo "=== Build output ==="
-          ls -la build/app_output/
-
-      - name: Create unsigned IPA
-        run: |
-          set -euo pipefail
-          echo "Creating unsigned IPA..."
+          echo "=== 2. Find .app ==="
+          find "$PWD/build/dd" -type d -name "*.app" -maxdepth 10 2>/dev/null || true
+          APP_PATH="$(find "$PWD/build/dd" -type d -name "*.app" -maxdepth 10 2>/dev/null | head -1)"
           
-          APP_PATH="$(find "build/app_output" -type d -name "*.app" | head -n 1)"
-          echo "Found app: ${APP_PATH}"
+          if [ -z "${APP_PATH}" ]; then
+            echo "=== Not in DD, searching build/ ==="
+            find "$PWD/build" -type d -name "*.app" -maxdepth 10 2>/dev/null || true
+            APP_PATH="$(find "$PWD/build" -type d -name "*.app" -maxdepth 10 2>/dev/null | head -1)"
+          fi
           
-          if [ -z "${APP_PATH}" ] || [ ! -d "${APP_PATH}" ]; then
-            echo "Error: .app not found in build/app_output"
-            find "build" -type d -name "*.app" -maxdepth 6
+          if [ -z "${APP_PATH}" ]; then
+            echo "=== Not in build/, searching entire workspace ==="
+            find "$PWD" -type d -name "*.app" -maxdepth 7 2>/dev/null | head -5 || true
+            APP_PATH="$(find "$PWD" -type d -name "*.app" -maxdepth 7 2>/dev/null | head -1)"
+          fi
+          
+          if [ -z "${APP_PATH}" ]; then
+            echo "ERROR: .app not found anywhere!"
+            echo "=== Full build tree ==="
+            find "$PWD/build" -maxdepth 8 2>/dev/null | head -80 || true
+            echo "=== DerivedData structure ==="
+            ls -laR "$PWD/build/dd/" 2>/dev/null | head -50 || true
             exit 1
           fi
           
+          echo "=== 3. Create IPA ==="
+          echo "Using: ${APP_PATH}"
           mkdir -p "build/exports/Payload"
           cp -R "${APP_PATH}" "build/exports/Payload/"
-          
           cd "build/exports"
           zip -r "${XCODE_SCHEME}.ipa" Payload/
           ls -lh "${XCODE_SCHEME}.ipa"
+
+      - name: Show Build Output
+        if: always()
+        run: |
+          find "build" -type f -name "*.ipa" 2>/dev/null | head -5 || true
+          ls -lh "build/exports/" 2>/dev/null || true
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
