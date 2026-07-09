@@ -155,17 +155,17 @@ class CameraViewController: UIViewController {
     }
     
     private func startLivenessSequence() {
-        var steps: [LivenessStep] = [.faceDetected, .smile, .blink, .leftTurn, .rightTurn]
-        var index = 0
+        let steps: [LivenessStep] = [.faceDetected, .smile, .blink, .leftTurn, .rightTurn]
+        currentStep = 0
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.faceOverlay.alpha = 1
-            self.proceedWithStep(steps, index: &index)
+            self.proceedWithStep(steps)
         }
     }
     
-    private func proceedWithStep(_ steps: [LivenessStep], index: inout Int) {
-        guard index < steps.count else {
+    private func proceedWithStep(_ steps: [LivenessStep]) {
+        guard currentStep < steps.count else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 self.statusLabel.text = "تم بنجاح!"
                 self.statusLabel.textColor = .systemGreen
@@ -173,13 +173,13 @@ class CameraViewController: UIViewController {
             }
             return
         }
-        let step = steps[index]
+        let step = steps[currentStep]
         statusLabel.text = step.instruction
         statusLabel.textColor = .white
         livenessTimer?.invalidate()
         livenessTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { _ in
-            index += 1
-            self.proceedWithStep(steps, index: &index)
+            self.currentStep += 1
+            self.proceedWithStep(steps)
         }
     }
     
@@ -230,7 +230,7 @@ extension CameraViewController {
     private func compressImage(_ image: UIImage, maxKB: Int) -> Data? {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return nil }
         if data.count <= maxKB * 1024 { return data }
-        var quality: CGFloat = 0.5
+        let quality: CGFloat = 0.5
         guard let resized = image.jpegData(compressionQuality: quality) else { return nil }
         if resized.count <= maxKB * 1024 { return resized }
         
