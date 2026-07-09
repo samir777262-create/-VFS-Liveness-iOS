@@ -115,7 +115,7 @@ class CameraViewController: UIViewController {
         statusLabel.numberOfLines = 2
         statusLabel.shadowColor = UIColor.black.withAlphaComponent(0.7)
         statusLabel.shadowOffset = CGSize(width: 1, height: 1)
-        statusLabel.shadowRadius = 4
+        statusLabel.layer.shadowRadius = 4
         view.addSubview(statusLabel)
         
         faceOverlay.translatesAutoresizingMaskIntoConstraints = false
