@@ -5,19 +5,20 @@
 	};
 	objectVersion = 56;
 	objects = {
-		/* Begin PBXBuildFile section */
+
+/* Begin PBXBuildFile section */
 		A0000001 /* VFSLivenessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000002 /* VFSLivenessApp.swift */; };
 		A0000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000004 /* ContentView.swift */; };
 		A0000005 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000006 /* CameraView.swift */; };
 		A0000007 /* FaceGuideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000008 /* FaceGuideOverlay.swift */; };
-		A0000009 /* CircularCaptureButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000A /* CircularCaptureButton.swift */; };
+		A0000009 /* CircularCaptureButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000A /* CircularCaptureButton.swift */; };
 		A000000B /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000C /* HapticFeedback.swift */; };
 		A000000D /* AzureConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000E /* AzureConfig.swift */; };
 		A000000F /* AzureFaceAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000010 /* AzureFaceAPIService.swift */; };
-				A0000013 /* AppIcon.appiconset in Resources */ = {isa = PBXBuildFile; fileRef = A0000014 /* AppIcon.appiconset */; };
-		/* End PBXBuildFile section */
+		A000002B /* AppIcon.appiconset in Resources */ = {isa = PBXBuildFile; fileRef = A0000014 /* AppIcon.appiconset */; };
+/* End PBXBuildFile section */
 
-		/* Begin PBXFileReference section */
+/* Begin PBXFileReference section */
 		A0000002 /* VFSLivenessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VFSLivenessApp.swift; sourceTree = "<group>"; };
 		A0000004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A0000006 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
@@ -26,12 +27,11 @@
 		A000000C /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		A000000E /* AzureConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureConfig.swift; sourceTree = "<group>"; };
 		A0000010 /* AzureFaceAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureFaceAPIService.swift; sourceTree = "<group>"; };
-		A0000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A0000014 /* AppIcon.appiconset */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = AppIcon.appiconset; sourceTree = "<group>"; };
 		A0000015 /* VFS_Liveness_Demo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VFS_Liveness_Demo.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		/* End PBXFileReference section */
+/* End PBXFileReference section */
 
-		/* Begin PBXFrameworksBuildPhase section */
+/* Begin PBXFrameworksBuildPhase section */
 		A0000016 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -39,9 +39,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		/* End PBXFrameworksBuildPhase section */
+/* End PBXFrameworksBuildPhase section */
 
-		/* Begin PBXGroup section */
+/* Begin PBXGroup section */
 		A0000017 = {
 			isa = PBXGroup;
 			children = (
@@ -77,15 +77,14 @@
 		A000001A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				A0000012 /* Info.plist */,
 				A0000014 /* AppIcon.appiconset */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		/* End PBXGroup section */
+/* End PBXGroup section */
 
-		/* Begin PBXNativeTarget section */
+/* Begin PBXNativeTarget section */
 		A000001B /* VFS_Liveness_Demo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A000001C /* Build configuration list for PBXNativeTarget "VFS_Liveness_Demo" */;
@@ -103,9 +102,9 @@
 			productReference = A0000015 /* VFS_Liveness_Demo.app */;
 			productType = "com.apple.product-type.application";
 		};
-		/* End PBXNativeTarget section */
+/* End PBXNativeTarget section */
 
-		/* Begin PBXProject section */
+/* Begin PBXProject section */
 		A000001F = {
 			isa = PBXProject;
 			attributes = {
@@ -134,20 +133,20 @@
 				A000001B /* VFS_Liveness_Demo */,
 			);
 		};
-		/* End PBXProject section */
+/* End PBXProject section */
 
-		/* Begin PBXResourcesBuildPhase section */
+/* Begin PBXResourcesBuildPhase section */
 		A000001E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A0000013 /* AppIcon.appiconset in Resources */,
+				A000002B /* AppIcon.appiconset in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		/* End PBXResourcesBuildPhase section */
+/* End PBXResourcesBuildPhase section */
 
-		/* Begin PBXSourcesBuildPhase section */
+/* Begin PBXSourcesBuildPhase section */
 		A000001D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -163,9 +162,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		/* End PBXSourcesBuildPhase section */
+/* End PBXSourcesBuildPhase section */
 
-		/* Begin XCBuildConfiguration section */
+/* Begin XCBuildConfiguration section */
 		A0000021 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -205,13 +204,14 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
-			);
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				ONLY_ACTIVE_ARCH = YES;
@@ -259,7 +259,7 @@
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
-			);
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -271,7 +271,7 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-			);
+				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yourcompany.vfslivenessdemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -282,9 +282,9 @@
 			};
 			name = Release;
 		};
-		/* End XCBuildConfiguration section */
+/* End XCBuildConfiguration section */
 
-		/* Begin XCConfigurationList section */
+/* Begin XCConfigurationList section */
 		A000001C /* Build configuration list for PBXNativeTarget "VFS_Liveness_Demo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -317,7 +317,7 @@
 			};
 			name = Release;
 		};
-		/* End XCConfigurationList section */
+/* End XCConfigurationList section */
 	};
 	rootObject = A000001F /* Project object */;
 }

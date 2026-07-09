@@ -3,8 +3,6 @@ name: iOS Build & IPA
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -15,100 +13,37 @@ jobs:
     env:
       XCODE_PROJECT: VFS_Liveness_Demo.xcodeproj
       XCODE_SCHEME: VFS_Liveness_Demo
-      XCODE_BUILD_DIR: build
-      # قم بتعيين القيم الافتراضية أو املأها من secrets
-      DEVELOPER_DIR: /Applications/Xcode_15.3.app
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s "$DEVELOPER_DIR"
+      - run: sudo xcode-select -s /Applications/Xcode_15.3.app
 
-      - name: Show Xcode version
+      - name: Build .app for device
         run: |
-          xcodebuild -version
-          xcode-select -p
-
-      - name: Cache CocoaPods
-        uses: actions/cache@v4
-        with:
-          path: Pods
-          key: pods-${{ hashFiles('**/Podfile.lock') }}
-          restore-keys: |
-            pods-
-
-      - name: Install dependencies
-        run: |
-          if [ -f Package.swift ]; then
-            swift package resolve
-          fi
-          if [ -f Podfile ]; then
-            pod install --repo-update
-          fi
-
-      - name: List Project Files
-        run: |
-          echo "=== Project Structure ==="
-          find . -maxdepth 3 -name "*.swift" -o -name "*.xcodeproj" -o -name "*.xcworkspace" -o -name "Info.plist"
-          ls -la "$XCODE_PROJECT" || echo "Project file not found"
-
-      - name: Build and Package
-        run: |
-          set -euo pipefail
-          
-          echo "=== 1. Build .app ==="
+          set -e
           xcodebuild build \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath "$PWD/build/dd" \
+            -derivedDataPath "build/dd" \
             CODE_SIGN_STYLE=Automatic \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            clean build 2>&1 | xcpretty --color || true
-          
-          echo "=== 2. Find .app ==="
-          find "$PWD/build/dd" -type d -name "*.app" -maxdepth 10 2>/dev/null || true
-          APP_PATH="$(find "$PWD/build/dd" -type d -name "*.app" -maxdepth 10 2>/dev/null | head -1)"
-          
-          if [ -z "${APP_PATH}" ]; then
-            echo "=== Not in DD, searching build/ ==="
-            find "$PWD/build" -type d -name "*.app" -maxdepth 10 2>/dev/null || true
-            APP_PATH="$(find "$PWD/build" -type d -name "*.app" -maxdepth 10 2>/dev/null | head -1)"
-          fi
-          
-          if [ -z "${APP_PATH}" ]; then
-            echo "=== Not in build/, searching entire workspace ==="
-            find "$PWD" -type d -name "*.app" -maxdepth 7 2>/dev/null | head -5 || true
-            APP_PATH="$(find "$PWD" -type d -name "*.app" -maxdepth 7 2>/dev/null | head -1)"
-          fi
-          
-          if [ -z "${APP_PATH}" ]; then
-            echo "ERROR: .app not found anywhere!"
-            echo "=== Full build tree ==="
-            find "$PWD/build" -maxdepth 8 2>/dev/null | head -80 || true
-            echo "=== DerivedData structure ==="
-            ls -laR "$PWD/build/dd/" 2>/dev/null | head -50 || true
-            exit 1
-          fi
-          
-          echo "=== 3. Create IPA ==="
-          echo "Using: ${APP_PATH}"
+            clean build
+
+      - name: Create unsigned IPA
+        run: |
+          set -e
+          APP_PATH=$(find "build/dd" -type d -name "*.app" -maxdepth 10 | head -1)
+          echo "App found at: $APP_PATH"
           mkdir -p "build/exports/Payload"
-          cp -R "${APP_PATH}" "build/exports/Payload/"
+          cp -R "$APP_PATH" "build/exports/Payload/"
           cd "build/exports"
           zip -r "${XCODE_SCHEME}.ipa" Payload/
           ls -lh "${XCODE_SCHEME}.ipa"
-
-      - name: Show Build Output
-        if: always()
-        run: |
-          find "build" -type f -name "*.ipa" 2>/dev/null | head -5 || true
-          ls -lh "build/exports/" 2>/dev/null || true
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
@@ -116,38 +51,3 @@ jobs:
           name: VFS_Liveness_Demo_${{ github.sha }}
           path: build/exports/*.ipa
           retention-days: 14
-
-      - name: Upload dSYMs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dSYMs_${{ github.sha }}
-          path: ${{ env.XCODE_BUILD_DIR }}/**/*.dSYM
-          retention-days: 7
-
-      - name: Show Build Output
-        if: always()
-        run: |
-          echo "=== Build Directory ==="
-          find "$XCODE_BUILD_DIR" -type f -name "*.ipa" -o -name "*.xcarchive" -o -name "*.app"
-          ls -lh "$XCODE_BUILD_DIR/exports/" || true
-
-      - name: Build Summary
-        if: success()
-        run: |
-          echo "## Build Success" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### IPA Files" >> $GITHUB_STEP_SUMMARY
-          echo "- **IPA:** VFS_Liveness_Demo_${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Download" >> $GITHUB_STEP_SUMMARY
-          echo "Go to **Actions** → select latest run → **Artifacts** section" >> $GITHUB_STEP_SUMMARY
-
-      - name: Build Failed Notification
-        if: failure()
-        run: |
-          echo "## Build Failed" >> $GITHUB_STEP_SUMMARY
-          echo "Check the logs for details" >> $GITHUB_STEP_SUMMARY
