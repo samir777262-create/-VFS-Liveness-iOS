@@ -24,4 +24,8 @@ enum AzureConfig {
     static let recognitionModel = "recognition_04"
     static let detectionModel   = "detection_04"
     static let returnAttributes = "liveness"
+
+    static let operationLocationHeader = "Operation-Location"
+    static let maxPollAttempts = 20
+    static let pollInterval: TimeInterval = 1.5
 }
