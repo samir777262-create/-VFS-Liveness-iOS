@@ -18,14 +18,14 @@ struct ContentView: View {
             if showLiveness {
                 LivenessCoordinatorView(
                     token: token,
-                    onResult: { result in
-                        livenessResult = result
+                    onResult: { success in
                         showLiveness = false
-                        switch result {
-                        case .success:
+                        if success {
+                            livenessResult = .success
                             resultMessage = "✓ Liveness check passed"
-                        case .failure(let msg):
-                            resultMessage = "✗ \(msg)"
+                        } else {
+                            livenessResult = .failure("Liveness check failed")
+                            resultMessage = "✗ Liveness check failed"
                         }
                     },
                     onCancel: {

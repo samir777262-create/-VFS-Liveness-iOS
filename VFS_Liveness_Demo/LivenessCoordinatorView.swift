@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Orchestrates liveness detection.
 ///
