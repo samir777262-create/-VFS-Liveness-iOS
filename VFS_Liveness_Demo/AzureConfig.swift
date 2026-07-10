@@ -1,21 +1,27 @@
 import Foundation
 
 enum AzureConfig {
-    // ضع قيمك هنا
+
+    // ═══════════════════════════════════════════════════════════════
+    // PATH A — Azure SDK (recommended, matches Android)
+    // The SDK handles everything: camera, liveness, session auth.
+    // Requires: Limited Access approval + PAT token → SPM package.
+    //
+    // No config needed here — the session token comes from VFS Logger.
+    // ═══════════════════════════════════════════════════════════════
+
+    // ═══════════════════════════════════════════════════════════════
+    // PATH B — REST API (current fallback)
+    // Requires a valid Azure Face API key + endpoint.
+    // Only detects faces, does NOT integrate with VFS token session.
+    // ═══════════════════════════════════════════════════════════════
+
     static let endpoint = "https://[YOUR-RESOURCE].cognitiveservices.azure.com"
     static let apiKey   = "[YOUR-FACE-API-KEY]"
-    
-    // Liveness endpoints
+
     static let detectURL = "\(endpoint)/face/v1.0/detect"
-    
-    // Parameters
+
     static let recognitionModel = "recognition_04"
     static let detectionModel   = "detection_04"
-    static let livenessMode     = "passive"   // passive أو active
     static let returnAttributes = "liveness"
-    
-    // Polling
-    static let operationLocationHeader = "Operation-Location"
-    static let maxPollAttempts = 20
-    static let pollInterval: TimeInterval = 1.5
 }

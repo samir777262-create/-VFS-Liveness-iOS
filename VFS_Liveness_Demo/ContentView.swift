@@ -1,113 +1,100 @@
 import SwiftUI
-import AVFoundation
-import UIKit
 
 struct ContentView: View {
-    @State private var capturedImage: UIImage? = nil
-    @State private var showingCamera = false
-    
+    @State private var token: String = ""
+    @State private var showLiveness = false
+    @State private var livenessResult: LivenessResult?
+    @State private var resultMessage: String?
+
+    enum LivenessResult {
+        case success
+        case failure(String)
+    }
+
     var body: some View {
         ZStack {
             Color.black.edgesIgnoringSafeArea(.all)
-            
-            if capturedImage == nil {
-                VStack(spacing: 30) {
+
+            if showLiveness {
+                LivenessCoordinatorView(
+                    token: token,
+                    onResult: { result in
+                        livenessResult = result
+                        showLiveness = false
+                        switch result {
+                        case .success:
+                            resultMessage = "✓ Liveness check passed"
+                        case .failure(let msg):
+                            resultMessage = "✗ \(msg)"
+                        }
+                    },
+                    onCancel: {
+                        showLiveness = false
+                    }
+                )
+            } else {
+                VStack(spacing: 24) {
                     Spacer()
-                    
-                    Image(systemName: "face.smiling")
-                        .font(.system(size: 80))
-                        .foregroundColor(.white.opacity(0.6))
-                    
+
+                    Image(systemName: "faceid")
+                        .font(.system(size: 72))
+                        .foregroundColor(.white.opacity(0.7))
+
                     Text("VFS Liveness")
                         .font(.largeTitle)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
-                    
-                    Text("اضغط لفتح الكاميرا والتقاط سيلفي")
+
+                    Text("الصق التوكن من VFS Logger ثم اضغط Start")
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(.white.opacity(0.6))
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showingCamera = true
-                    }) {
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Session Token")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.5))
+
+                        TextEditor(text: $token)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.white)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.white.opacity(0.08))
+                            .cornerRadius(10)
+                            .frame(height: 100)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                    }
+                    .padding(.horizontal, 24)
+
+                    if let msg = resultMessage {
+                        Text(msg)
+                            .font(.headline)
+                            .foregroundColor(msg.hasPrefix("✓") ? .green : .red)
+                            .padding(.horizontal)
+                    }
+
+                    Button(action: { showLiveness = true }) {
                         HStack {
-                            Image(systemName: "camera.fill")
-                            Text("التقط سيلفي")
+                            Image(systemName: "play.fill")
+                            Text("Start Liveness")
                         }
                         .font(.headline)
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
+                        .background(token.isEmpty ? Color.gray : Color.blue)
                         .cornerRadius(12)
-                        .padding(.horizontal, 40)
                     }
-                    .sheet(isPresented: $showingCamera) {
-                        CameraView(capturedImage: $capturedImage)
-                    }
-                    
+                    .disabled(token.isEmpty)
+                    .padding(.horizontal, 40)
+
                     Spacer()
                 }
-            } else {
-                VStack(spacing: 25) {
-                    Text("تم التقاط السيلفي")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                    
-                    if let image = capturedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 350)
-                            .cornerRadius(16)
-                            .shadow(radius: 15)
-                    }
-                    
-                    HStack(spacing: 15) {
-                        Button(action: { capturedImage = nil }) {
-                            HStack {
-                                Image(systemName: "arrow.counterclockwise")
-                                Text("إعادة")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray)
-                            .cornerRadius(12)
-                        }
-                        
-                        Button(action: saveToPhotos) {
-                            HStack {
-                                Image(systemName: "square.and.arrow.down")
-                                Text("حفظ")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .cornerRadius(12)
-                        }
-                    }
-                    .padding(.horizontal, 30)
-                    
-                    Spacer()
-                }
-                .padding(.top, 50)
             }
         }
-    }
-    
-    private func saveToPhotos() {
-        guard let image = capturedImage else { return }
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        HapticFeedback.success()
     }
 }
 
