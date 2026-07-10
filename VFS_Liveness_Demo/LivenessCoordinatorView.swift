@@ -71,6 +71,11 @@ private struct ManualLivenessView: View {
 
             if showCamera {
                 CameraView(capturedImage: $capturedImage)
+                    .onDisappear {
+                        if capturedImage != nil {
+                            startProcessing()
+                        }
+                    }
             } else if isProcessing {
                 VStack(spacing: 20) {
                     ProgressView()
@@ -128,16 +133,15 @@ private struct ManualLivenessView: View {
                 }
             }
         }
-        .onChange(of: capturedImage) { _ in
-            if capturedImage != nil {
-                isProcessing = true
-                statusMessage = "Simulating liveness check..."
+    }
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    statusMessage = "✓ Liveness check passed (simulated)"
-                    isProcessing = false
-                }
-            }
+    private func startProcessing() {
+        isProcessing = true
+        statusMessage = "Simulating liveness check..."
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            statusMessage = "✓ Liveness check passed (simulated)"
+            isProcessing = false
         }
     }
 }
